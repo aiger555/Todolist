@@ -2,12 +2,15 @@ from rest_framework import status
 from rest_framework import serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django.shortcuts import  get_object_or_404
 from .models import Task
 from .serializers import TaskSerializer
 
 
 class TaskAPIView(APIView):
+    
+    permission_classes = [IsAuthenticated, ]
     
     def get(self, request):
         tasks = Task.objects.all()
@@ -18,11 +21,14 @@ class TaskAPIView(APIView):
 
     def post(self, request):
         serializer = TaskSerializer(data=request.data)
+        user = request.user
         
         if serializer.is_valid():
             body = serializer._validated_data.get('body')
             estimated_finish_time = serializer.validated_data.get('estimated_finish_time')
-            task = Task.objects.create(body=body, estimated_finish_time=estimated_finish_time)
+            task = Task.objects.create(creator=user, 
+                                       body=body, 
+                                       estimated_finish_time=estimated_finish_time)
             serializer = TaskSerializer(instance=task)
             return Response(serializer.data)
         
@@ -54,4 +60,3 @@ class TaskDetailAPIView(APIView):
         task = get_object_or_404(Task, id=id)
         task.delete()
         return Response({'detail':'success'}, status=status.HTTP_204_NO_CONTENT)
-        
